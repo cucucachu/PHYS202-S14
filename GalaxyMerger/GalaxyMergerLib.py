@@ -15,6 +15,9 @@ def circleInit(radius, angle, gamma, M):
     
     return [posx, velx, posy, vely];
 
+def elipticalInit(a, angle, gamma, M):
+    return;
+
 def plotCircle(posx, velx, posy, vely, gamma, M):
     traj = [posx, velx, posy, vely];
     
@@ -72,7 +75,7 @@ class Body:
             return np.array([xvel, xaccel, yvel, yaccel])
 
         try:
-            self.loc = odeint(R, self.loc, time);        
+            self.loc = odeint(R, self.loc, time);
         except:
             print "Trajectory() failed.";
 
@@ -90,6 +93,12 @@ class Body:
         
     def GetTrajectory(self):
         return self.loc[:,0], self.loc[:,2];
+        
+    def changeView(self, newX, newY):
+        '''Converts all positions to change the origin of the graph'''
+        
+        self.loc[:,0] = self.loc[:,0] - newX;
+        self.loc[:,2] = self.loc[:,2] - newY;
 
 class Star(Body):
         
@@ -101,6 +110,9 @@ class Star(Body):
         
         try:
             x, vx, y, vy = circleInit(radius, angle, gamma, M);
+            #tempX = radius * np.cos(angle);
+            #tempY = radius * np.sin(angle);
+            #x, vx, y, vy = elipticalInit(tempX, tempY, gamma, M);
             #print "Star Created:",x,vx,y,vy;                                 #debug
             #print "gamma",gamma,"M",M;
             self.loc = [x, vx, y, vy, sLoc[0], sLoc[1], sLoc[2], sLoc[3]];
@@ -178,17 +190,6 @@ class Star(Body):
         
         plt.legend(loc="best");
         plt.show();
-        
-    def circleInit(radius, angle, gamma, M):
-    
-        posx = radius * np.cos(angle);
-        posy = radius * np.sin(angle);
-        accel = gamma * M;
-        vel = np.sqrt(np.abs(accel / radius));
-        velx = vel * np.cos(angle + np.pi/2.);
-        vely = vel * np.sin(angle + np.pi/2.);
-
-        return [posx, velx, posy, vely];
 
 class Galaxy:
     
@@ -203,7 +204,8 @@ class Galaxy:
            requirements: setTime must already have been called
            Sets up and calculates the trajectory of the other galaxy S
         '''
-        self.S_Galaxy = Body((posx, posy), (velx, vely), self.gamma, self.M, self.S, self.time)
+        self.S_Galaxy = Body((posx, posy), (velx, vely), self.gamma, self.M,\
+                        self.S, self.time);
         
     def setTime(self, timeLimit, resolution):
         '''sets up the array of time for the ODE'''
@@ -219,9 +221,36 @@ class Galaxy:
             
         self.rings.append(ring);
         
+    def makeRingEllipse(self, radius, numStars):
+        '''Requirements: setS() must already have been called succesfully'''
+        ring = [];
+        for i in range(numStars):
+            angle = 2 * np.pi * i / numStars;
+        
     def makeStars(self, rings, stars):
         for ring in range(1, rings+1):
             self.makeRing(3*ring, stars);
+            
+    def changeView(self, newX, newY):
+        self.S_Galaxy.loc[:,0] = self.S_Galaxy.loc[:,0] - newX;
+        self.S_Galaxy.loc[:,2] = self.S_Galaxy.loc[:,2] - newY;
+        for ring in self.rings:
+            for star in ring:
+                star.changeView(newX, newY);
+                
+    def changeViewS(self):
+        newX = self.S_Galaxy.loc[:,0];
+        newY = self.S_Galaxy.loc[:,2];
+        
+        for ring in self.rings:
+            for star in ring:
+                star.changeView(newX, newY);
+        
+        self.S_Galaxy.loc[:,0] = -self.S_Galaxy.loc[:,0];
+        self.S_Galaxy.loc[:,2] = -self.S_Galaxy.loc[:,2];
+        
+    def changeViewCOM(self):
+        return;
         
     def snapShot(self, time):
         starXs = [];
@@ -256,8 +285,8 @@ class Galaxy:
             
     def animationSetup(self):
         '''Requires that stars and bodies have been initialized
-            Sets up xCoors and yCoors such that xCoors[time][star] will return the x coordinate
-            of star <star> at time <time>'''
+            Sets up xCoors and yCoors such that xCoors[time][star] will
+            return the x coordinate of star <star> at time <time>'''
         self.xCoors = [];
         self.yCoors = [];
         
@@ -277,26 +306,22 @@ class Galaxy:
         
     def animate(self):
         '''Requires that AnimationSettup has already been called succesfully'''
-        # First set up the figure, the axis, and the plot element we want to animate
         fig = plt.figure()
-        ax = plt.axes(xlim=(-40, 40), ylim=(-40, 40), axisbg="black");
+        ax = plt.axes(xlim=(-100, 100), ylim=(-100, 100), axisbg="black");
         stars, = ax.plot([], [], "w*", markersize=10);
         #galaxies, = ax.plot([], [], "bo", markersize=100);
         #data.append(stars).
 
-        # initialization function: plot the background of each frame
         def init():
             stars.set_data([], []);
             return stars,
-
-        # animation function. This is called sequentially
+            
         def animate(time):
             x = self.xCoors[time];
             y = self.yCoors[time];
             stars.set_data(x, y);
             return stars,
 
-        # call the animator.  blit=True means only re-draw the parts that have changed.
         anim = animation.FuncAnimation(fig, animate, init_func=init,
                                        frames=len(self.time), interval=30, blit=True)
                                        
