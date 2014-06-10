@@ -307,8 +307,8 @@ class Galaxy:
         plt.scatter(self.S_Galaxy.loc[time, 0], self.S_Galaxy.loc[time, 2], c="red", s=100);
         
         plt.title(title);
-        plt.xlim(-20, 20);
-        plt.ylim(-20, 20);
+        plt.xlim(-100, 100);
+        plt.ylim(-100, 100);
         plt.show();
         
         

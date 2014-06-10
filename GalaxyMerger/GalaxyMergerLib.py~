@@ -300,9 +300,6 @@ class Galaxy:
                 starXs.append(star.loc[time, 0]);
                 starYs.append(star.loc[time, 2]);
         
-        #print "Star 1 distance from M", (self.rings[0][0].loc[time,0]**2 + self.rings[0][0].loc[time,2]**2)**.5
-        
-        #plt.figure(figsize=(400, 400)); #crashes for some reason
         plt.subplot(111, axisbg='black');
         
         plt.scatter(0, 0, c="yellow", s=100);                
