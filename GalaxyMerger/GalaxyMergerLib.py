@@ -102,7 +102,7 @@ class Body:
 
 class Star(Body):
         
-    def __init__(self, radius, angle, sLoc, gamma, M, S, time):
+    def __init__(self, radius, angle, sLoc, gamma, M, S, time, clockWise=False):
         """
         @param radius - initial radius measured from local galaxy center
         @param angle - initial angle of this stars pos relative to galaxy center
@@ -110,13 +110,11 @@ class Star(Body):
         
         try:
             x, vx, y, vy = circleInit(radius, angle, gamma, M);
-            #tempX = radius * np.cos(angle);
-            #tempY = radius * np.sin(angle);
-            #x, vx, y, vy = elipticalInit(tempX, tempY, gamma, M);
-            #print "Star Created:",x,vx,y,vy;                                 #debug
-            #print "gamma",gamma,"M",M;
-            self.loc = [x, vx, y, vy, sLoc[0], sLoc[1], sLoc[2], sLoc[3]];
-
+            
+            if (clockWise == False):
+                self.loc = [x, vx, y, vy, sLoc[0], sLoc[1], sLoc[2], sLoc[3]];
+            else:
+                self.loc = [x, -vx, y, -vy, sLoc[0], sLoc[1], sLoc[2], sLoc[3]];
             self.gamma = gamma;
             self.M = M;
             self.S = S;
@@ -212,12 +210,13 @@ class Galaxy:
         self.resolution = resolution;
         self.time = np.linspace(0, timeLimit, resolution * (timeLimit + 1));
     
-    def makeRing(self, radius, numStars):
+    def makeRing(self, radius, numStars, clockWise=False):
         '''requirements: setS must already have be called'''
         ring = [];
         for i in range(numStars):
             angle = 2 * np.pi * i / numStars;
-            ring.append(Star(radius, angle, self.S_Galaxy.loc[0], self.gamma, self.M, self.S, self.time));
+            ring.append(Star(radius, angle, self.S_Galaxy.loc[0], \
+                             self.gamma, self.M, self.S, self.time, clockWise));
             
         self.rings.append(ring);
         
@@ -227,9 +226,23 @@ class Galaxy:
         for i in range(numStars):
             angle = 2 * np.pi * i / numStars;
         
-    def makeStars(self, rings, stars):
+    def makeStars(self, rings, stars, clockWise=False):
+        '''requirements: setS must already have be called'''
         for ring in range(1, rings+1):
-            self.makeRing(3*ring, stars);
+            self.makeRing(ring*5, stars, clockWise);
+            print "%2.1f%%" % (100 * float(ring) / float(rings));
+            
+            
+            
+    def makeToomreStars(self, clockWise=False):
+        '''requirements: setS must already have be called'''
+        curStar = 0.
+        for ring in range(1, 6):
+            for numStars in range(6 *(1 + ring)):
+                self.makeRing((ring + 1) * 2.5, numStars, clockWise);
+                curStar = curStar + 1;
+                print "%2.1f%% finished" % (100. * float(curStar) / 120.);
+
             
     def changeView(self, newX, newY):
         self.S_Galaxy.loc[:,0] = self.S_Galaxy.loc[:,0] - newX;
@@ -290,7 +303,7 @@ class Galaxy:
         self.xCoors = [];
         self.yCoors = [];
         
-        for time in self.time:
+        for time in range(len(self.time)):
             instantXs = [];
             instantYs = [];
             for ring in self.rings:
@@ -323,6 +336,8 @@ class Galaxy:
             return stars,
 
         anim = animation.FuncAnimation(fig, animate, init_func=init,
-                                       frames=len(self.time), interval=30, blit=True)
+                                       frames=len(self.time), interval=33, blit=True);
+                                       
+        anim.save('animation1.mp4', fps=30, extra_args=['-vcodec', 'libx264']);
                                        
         plt.show();
